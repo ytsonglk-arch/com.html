@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/L Fast Track - 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Abhaya+Libre:wght@700&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #0f172a; color: white; }
+        .sinhala-font { font-family: 'Abhaya Libre', serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); transition: 0.3s; }
+        .tab-content { display: none; }
+        .active-tab { display: block; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Auth Screen (Login/Register) -->
+    <div id="auth-screen" class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <h1 class="text-4xl font-extrabold text-yellow-500 mb-2">A/L Fast Track</h1>
+        <p class="text-gray-400 mb-8 italic">මාස කිහිපයෙන් ගොඩ දාගමු!</p>
+        
+        <div class="w-full max-w-sm glass-card p-8 rounded-3xl shadow-2xl">
+            <h2 id="auth-title" class="text-xl font-bold mb-6">Login</h2>
+            
+            <div id="register-fields" class="hidden">
+                <input type="text" id="reg-name" placeholder="ඔබේ නම" class="w-full p-4 mb-4 rounded-xl bg-slate-800 border border-slate-700 outline-none focus:border-yellow-500">
+            </div>
+            
+            <input type="email" id="auth-email" placeholder="Email ලිපිනය" class="w-full p-4 mb-4 rounded-xl bg-slate-800 border border-slate-700 outline-none focus:border-yellow-500">
+            <input type="password" id="auth-password" placeholder="මුරපදය (Password)" class="w-full p-4 mb-6 rounded-xl bg-slate-800 border border-slate-700 outline-none focus:border-yellow-500">
+            
+            <button onclick="handleAuth()" id="auth-btn" class="w-full p-4 bg-yellow-500 text-slate-900 font-bold rounded-xl shadow-lg hover:bg-yellow-400 transition mb-4 text-lg">Login</button>
+            
+            <p class="text-sm text-gray-400">
+                <span id="toggle-text">ගිණුමක් නොමැතිද?</span> 
+                <button onclick="toggleAuthMode()" id="toggle-btn" class="text-yellow-500 font-bold ml-1">Register වන්න</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- 2. Dashboard -->
+    <div id="dashboard" class="hidden min-h-screen p-6">
+        <header class="flex justify-between items-start mb-10">
+            <div>
+                <h1 class="text-3xl font-bold text-yellow-500 sinhala-font tracking-tight">විෂයයන් තෝරන්න</h1>
+                <p id="user-display" class="text-gray-400 text-sm italic mt-1">Art Stream - 2026</p>
+            </div>
+            <button onclick="handleLogout()" class="text-red-400 text-xs bg-red-400/10 px-4 py-2 rounded-xl border border-red-400/20">Logout</button>
+        </header>
+
+        <div class="grid grid-cols-1 gap-4">
+            <div onclick="openSubject('Buddhist Culture')" class="glass-card p-6 rounded-2xl flex items-center cursor-pointer hover:scale-[1.02] active:scale-95 transition">
+                <div class="bg-orange-600 p-4 rounded-xl mr-5 shadow-lg shadow-orange-900/40"><i class="fas fa-dharmachakra text-xl"></i></div>
+                <span class="text-xl font-bold">Buddhist Culture</span>
+            </div>
+            <div onclick="openSubject('Media Studies')" class="glass-card p-6 rounded-2xl flex items-center cursor-pointer hover:scale-[1.02] active:scale-95 transition">
+                <div class="bg-purple-600 p-4 rounded-xl mr-5 shadow-lg shadow-purple-900/40"><i class="fas fa-video text-xl"></i></div>
+                <span class="text-xl font-bold">Media Studies</span>
+            </div>
+            <!-- අනිත් විෂයන් මෙතනට එකතු කළ හැක -->
+        </div>
+    </div>
+
+    <!-- 3. Subject Detail View -->
+    <div id="subject-screen" class="hidden min-h-screen p-6">
+        <button onclick="backToDashboard()" class="mb-8 text-gray-400 flex items-center bg-slate-800 px-4 py-2 rounded-xl w-fit"><i class="fas fa-arrow-left mr-2"></i> ආපසු</button>
+        <h1 id="selected-subject-name" class="text-3xl font-bold text-yellow-500 mb-8 border-b border-yellow-500/20 pb-4">Subject</h1>
+
+        <!-- Tabs -->
+        <div class="flex space-x-2 mb-8 bg-slate-800/50 p-1 rounded-2xl">
+            <button onclick="showTab('papers')" id="btn-papers" class="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-slate-900 transition">Papers</button>
+            <button onclick="showTab('guess')" id="btn-guess" class="flex-1 py-3 rounded-xl font-bold text-gray-400 transition">අනුමාන</button>
+            <button onclick="showTab('notes')" id="btn-notes" class="flex-1 py-3 rounded-xl font-bold text-gray-400 transition">Notes</button>
+        </div>
+
+        <div id="papers" class="tab-content active-tab space-y-4"></div>
+        <div id="guess" class="tab-content space-y-4"></div>
+        <div id="notes" class="tab-content space-y-4"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB_10UzdkgZPlu-P361PYbEQjTwbKjjWx0",
+            authDomain: "al-fast-track.firebaseapp.com",
+            projectId: "al-fast-track",
+            storageBucket: "al-fast-track.firebasestorage.app",
+            messagingSenderId: "272353911468",
+            appId: "1:272353911468:web:07c22eb0c9f167fce37509"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ======= BC දත්ත (Data) =======
+        const bcContent = {
+            papers: ["2023 BC Past Paper", "2022 BC Past Paper", "2021 BC Past Paper"],
+            guess: ["2026 BC අනුමාන පත්‍රය 01", "වැදගත් සිතියම් සටහන්"],
+            notes: ["ශාසන ඉතිහාසය සාරාංශය", "ඉන්දීය පසුබිම කෙටි සටහන්"]
+        };
+
+        // ======= Auth Logic =======
+        let isLoginMode = true;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Login" : "Register";
+            document.getElementById('auth-btn').innerText = isLoginMode ? "Login" : "Register";
+            document.getElementById('toggle-text').innerText = isLoginMode ? "ගිණුමක් නොමැතිද?" : "දැනටමත් ගිණුමක් තිබේද?";
+            document.getElementById('toggle-btn').innerText = isLoginMode ? "Register වන්න" : "Login වන්න";
+            document.getElementById('register-fields').classList.toggle('hidden');
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const name = document.getElementById('reg-name').value;
+            const btn = document.getElementById('auth-btn');
+
+            if (!email || !password) return alert("කරුණාකර සියලු විස්තර පුරවන්න.");
+            
+            btn.innerText = "සම්බන්ධ වෙමින්...";
+            btn.disabled = true;
+
+            try {
+                if (isLoginMode) {
+                    await auth.signInWithEmailAndPassword(email, password);
+                } else {
+                    if (!name) throw new Error("නම ඇතුළත් කිරීම අනිවාර්යයි.");
+                    const res = await auth.createUserWithEmailAndPassword(email, password);
+                    await db.collection("students").doc(res.user.uid).set({ name: name, email: email });
+                }
+            } catch (error) {
+                alert("ගැටලුවක් පවතී: " + error.message);
+                btn.innerText = isLoginMode ? "Login" : "Register";
+                btn.disabled = false;
+            }
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+            }
+        });
+
+        function handleLogout() {
+            auth.signOut().then(() => location.reload());
+        }
+
+        // ======= UI Logic =======
+        function openSubject(name) {
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('subject-screen').classList.remove('hidden');
+            document.getElementById('selected-subject-name').innerText = name;
+
+            const pDiv = document.getElementById('papers');
+            const gDiv = document.getElementById('guess');
+            const nDiv = document.getElementById('notes');
+
+            if (name === 'Buddhist Culture') {
+                pDiv.innerHTML = bcContent.papers.map(i => `<div class="glass-card p-5 rounded-2xl flex justify-between items-center"><span>${i}</span><i class="fas fa-file-pdf text-red-500"></i></div>`).join('');
+                gDiv.innerHTML = bcContent.guess.map(i => `<div class="glass-card p-5 rounded-2xl border-l-4 border-yellow-500"><span>${i}</span></div>`).join('');
+                nDiv.innerHTML = bcContent.notes.map(i => `<div class="glass-card p-5 rounded-2xl text-gray-400 italic"><span>${i}</span></div>`).join('');
+            } else {
+                [pDiv, gDiv, nDiv].forEach(d => d.innerHTML = `<div class="p-4 italic text-gray-500 text-center">වැඩි විස්තර ළඟදීම...</div>`);
+            }
+        }
+
+        function backToDashboard() {
+            document.getElementById('subject-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
+            document.querySelectorAll('#subject-screen button[id^="btn-"]').forEach(b => {
+                b.classList.remove('bg-yellow-500', 'text-slate-900');
+                b.classList.add('text-gray-400');
+            });
+            document.getElementById(tabId).classList.add('active-tab');
+            document.getElementById('btn-' + tabId).classList.add('bg-yellow-500', 'text-slate-900');
+            document.getElementById('btn-' + tabId).classList.remove('text-gray-400');
+        }
+    </script>
+</body>
+</html>
